@@ -1,13 +1,7 @@
-// Este es el corazón de la aplicación.
-// Aquí iría toda la lógica de la BD (IndexedDB), manejo de eventos,
-// actualización de la UI, y lógica del gráfico.
-
-// (Pseudocódigo y estructura general - la implementación real sería más larga)
-
 document.addEventListener('DOMContentLoaded', () => {
     // 1. Inicialización de IndexedDB
     const DB_NAME = 'gastosFamiliaresDB';
-    const DB_VERSION = 1;
+    const DB_VERSION = 2;
     let db;
 
     const request = indexedDB.open(DB_NAME, DB_VERSION);
@@ -18,9 +12,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
     request.onupgradeneeded = (event) => {
         db = event.target.result;
-        const objectStore = db.createObjectStore('gastos', { keyPath: 'id', autoIncrement: true });
-        objectStore.createIndex('fecha', 'fecha', { unique: false });
-        objectStore.createIndex('mesAnio', ['mes', 'anio'], { unique: false });
+        // Si la objectStore 'gastos' ya existe y necesitas cambiarla,
+        // deberías borrarla y recrearla (o usar migraciones, más avanzado).
+        // Para añadir un índice 'concepto', simplemente lo creamos.
+        if (!db.objectStoreNames.contains('gastos')) {
+            const objectStore = db.createObjectStore('gastos', { keyPath: 'id', autoIncrement: true });
+            objectStore.createIndex('fecha', 'fecha', { unique: false });
+            objectStore.createIndex('mesAnio', ['mes', 'anio'], { unique: false });
+            objectStore.createIndex('concepto', 'concepto', { unique: false }); // Nuevo índice para el concepto
+        } else {
+            // Si ya existe, podemos intentar añadir el índice si no lo tiene.
+            // Esto es más complejo y requeriría incrementar DB_VERSION para que onupgradeneeded se ejecute de nuevo.
+            // Para simplicidad en este ejemplo, si ya existe, asumimos que tiene el índice.
+            // Si cambias DB_VERSION a 2, por ejemplo, puedes hacer:
+            // const objectStore = request.transaction.objectStore('gastos');
+            // if (!objectStore.indexNames.contains('concepto')) {
+            //     objectStore.createIndex('concepto', 'concepto', { unique: false });
+            // }
+        }
         console.log('Base de datos creada/actualizada');
     };
 
@@ -29,9 +38,10 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('Base de datos abierta correctamente');
         // Cargar datos iniciales o el dashboard
         loadDashboard();
-        loadExpenseList(); // Cargar la lista inicial
-        populateFilterOptions(); // Rellenar los filtros de mes y año
-        renderChart(); // Renderizar el gráfico inicial
+        loadExpenseList();
+        populateFilterOptions();
+        populateConceptFilterOptions(); // Nuevo: rellenar opciones de concepto para el gráfico
+        renderChart();
     };
 
     // 2. Elementos del DOM
@@ -39,14 +49,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const formGastoSection = document.getElementById('form-gasto');
     const formRegistroGasto = document.getElementById('form-registro-gasto');
     const btnCancelarGasto = document.getElementById('btn-cancelar-gasto');
+    const btnBorrarTodo = document.getElementById('btn-borrar-todo'); // Nuevo botón
     const listaGastosContainer = document.getElementById('lista-gastos-container');
     const filtroMes = document.getElementById('filtro-mes');
     const filtroAnio = document.getElementById('filtro-anio');
     const aplicarFiltroBtn = document.getElementById('aplicar-filtro');
     const resetearFiltroBtn = document.getElementById('resetear-filtro');
     const graficoAnioSelect = document.getElementById('grafico-anio');
+    const graficoConceptoSelect = document.getElementById('grafico-concepto'); // Nuevo select de concepto para gráfico
     const actualizarGraficoBtn = document.getElementById('actualizar-grafico');
     const myChartCanvas = document.getElementById('myChart');
+
+    // Campos del formulario de gasto
+    const inputFecha = document.getElementById('fecha');
+    const inputImporte = document.getElementById('importe');
+    const inputConcepto = document.getElementById('concepto-input'); // Campo de texto libre
+    const selectConcepto = document.getElementById('concepto-select'); // Select de conceptos por defecto
 
     // Navegación
     const navDashboardBtn = document.getElementById('nav-dashboard');
@@ -58,6 +76,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 3. Manejadores de Eventos
     btnNuevoGasto.addEventListener('click', () => {
+        // Establecer la fecha actual por defecto en el formulario
+        inputFecha.valueAsDate = new Date();
         showSection(formGastoSection);
     });
 
@@ -66,11 +86,23 @@ document.addEventListener('DOMContentLoaded', () => {
         showSection(dashboardSection);
     });
 
+    // Nuevo manejador para borrar todos los gastos
+    btnBorrarTodo.addEventListener('click', () => {
+        if (confirm('¿Estás seguro de que quieres BORRAR TODOS los gastos? Esta acción es irreversible.')) {
+            clearAllGastos();
+        }
+    });
+
     formRegistroGasto.addEventListener('submit', (event) => {
         event.preventDefault();
-        const fecha = document.getElementById('fecha').value;
-        const importe = parseFloat(document.getElementById('importe').value);
-        const concepto = document.getElementById('concepto').value;
+        const fecha = inputFecha.value;
+        const importe = parseFloat(inputImporte.value);
+
+        // Lógica para obtener el concepto: preferir el select si se seleccionó uno
+        let concepto = inputConcepto.value.trim(); // Concepto del input de texto
+        if (selectConcepto.value !== "") { // Si se seleccionó algo en el select
+            concepto = selectConcepto.value;
+        }
 
         if (fecha && importe > 0 && concepto) {
             const dateObj = new Date(fecha);
@@ -82,7 +114,7 @@ document.addEventListener('DOMContentLoaded', () => {
             formRegistroGasto.reset();
             showSection(dashboardSection);
         } else {
-            alert('Por favor, rellena todos los campos correctamente.');
+            alert('Por favor, rellena al menos la fecha, el importe y un concepto válido.');
         }
     });
 
@@ -92,7 +124,8 @@ document.addEventListener('DOMContentLoaded', () => {
         filtroAnio.value = '';
         loadExpenseList();
     });
-    actualizarGraficoBtn.addEventListener('click', renderChart);
+
+    actualizarGraficoBtn.addEventListener('click', renderChart); // Actualizar gráfico con nuevo filtro de concepto
 
     navDashboardBtn.addEventListener('click', () => showSection(dashboardSection));
     navListadoBtn.addEventListener('click', () => showSection(listadoGastosSection));
@@ -106,14 +139,55 @@ document.addEventListener('DOMContentLoaded', () => {
 
         request.onsuccess = () => {
             console.log('Gasto añadido con éxito');
-            loadDashboard(); // Actualizar el dashboard
-            loadExpenseList(); // Actualizar la lista
-            populateFilterOptions(); // Actualizar opciones de filtro si hay nuevos años/meses
-            renderChart(); // Actualizar el gráfico
+            loadDashboard();
+            loadExpenseList();
+            populateFilterOptions();
+            populateConceptFilterOptions(); // Actualizar conceptos para el gráfico
+            renderChart();
         };
 
         request.onerror = (event) => {
             console.error('Error al añadir gasto:', event.target.errorCode);
+        };
+    }
+
+    // Nuevo: Función para borrar un gasto específico
+    function deleteGasto(id) {
+        const transaction = db.transaction(['gastos'], 'readwrite');
+        const objectStore = transaction.objectStore('gastos');
+        const request = objectStore.delete(id);
+
+        request.onsuccess = () => {
+            console.log('Gasto borrado con éxito:', id);
+            loadDashboard();
+            loadExpenseList();
+            populateFilterOptions();
+            populateConceptFilterOptions(); // Actualizar conceptos para el gráfico
+            renderChart();
+        };
+
+        request.onerror = (event) => {
+            console.error('Error al borrar gasto:', event.target.errorCode);
+        };
+    }
+
+    // Nuevo: Función para borrar todos los gastos
+    function clearAllGastos() {
+        const transaction = db.transaction(['gastos'], 'readwrite');
+        const objectStore = transaction.objectStore('gastos');
+        const request = objectStore.clear();
+
+        request.onsuccess = () => {
+            console.log('Todos los gastos han sido borrados.');
+            loadDashboard();
+            loadExpenseList();
+            populateFilterOptions();
+            populateConceptFilterOptions(); // Limpiar conceptos para el gráfico
+            renderChart();
+        };
+
+        request.onerror = (event) => {
+            console.error('Error al borrar todos los gastos:', event.target.errorCode);
         };
     }
 
@@ -176,11 +250,24 @@ document.addEventListener('DOMContentLoaded', () => {
         gastosFiltrados.forEach(gasto => {
             const li = document.createElement('li');
             li.innerHTML = `
-                <span>${gasto.fecha}</span> -
-                <span>${gasto.concepto}</span>:
-                <strong>€${gasto.importe.toFixed(2)}</strong>
+                <div>
+                    <span>${gasto.fecha}</span> -
+                    <span>${gasto.concepto}</span>:
+                    <strong>€${gasto.importe.toFixed(2)}</strong>
+                </div>
+                <button class="delete-button" data-id="${gasto.id}">Borrar</button>
             `;
             listaGastosContainer.appendChild(li);
+        });
+
+        // Añadir listeners a los nuevos botones de borrado
+        document.querySelectorAll('.delete-button').forEach(button => {
+            button.addEventListener('click', (event) => {
+                const idToDelete = parseInt(event.target.dataset.id);
+                if (confirm('¿Estás seguro de que quieres borrar este gasto?')) {
+                    deleteGasto(idToDelete);
+                }
+            });
         });
     }
 
@@ -210,6 +297,11 @@ document.addEventListener('DOMContentLoaded', () => {
             option2.textContent = anio;
             graficoAnioSelect.appendChild(option2);
         });
+        // Seleccionar el año actual por defecto en el gráfico si existe
+        if (graficoAnioSelect.value === '' && anios.includes(new Date().getFullYear())) {
+            graficoAnioSelect.value = new Date().getFullYear();
+        }
+
 
         // Rellenar select de meses
         filtroMes.innerHTML = '<option value="">Todos</option>';
@@ -221,16 +313,37 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Nuevo: Función para rellenar opciones de concepto para el filtro del gráfico
+    async function populateConceptFilterOptions() {
+        const gastos = await getAllGastos();
+        const conceptos = [...new Set(gastos.map(g => g.concepto))].sort();
+
+        graficoConceptoSelect.innerHTML = '<option value="">Todos</option>';
+        conceptos.forEach(concepto => {
+            const option = document.createElement('option');
+            option.value = concepto;
+            option.textContent = concepto;
+            graficoConceptoSelect.appendChild(option);
+        });
+    }
+
+
     let myChart; // Variable para la instancia de Chart.js
 
     async function renderChart() {
         const gastos = await getAllGastos();
         const anioSeleccionado = graficoAnioSelect.value;
+        const conceptoFiltrado = graficoConceptoSelect.value; // Nuevo filtro por concepto
+
         let gastosParaGrafico = gastos;
 
         if (anioSeleccionado) {
-            gastosParaGrafico = gastos.filter(g => g.anio === parseInt(anioSeleccionado));
+            gastosParaGrafico = gastosParaGrafico.filter(g => g.anio === parseInt(anioSeleccionado));
         }
+        if (conceptoFiltrado) { // Aplicar filtro de concepto si está seleccionado
+            gastosParaGrafico = gastosParaGrafico.filter(g => g.concepto === conceptoFiltrado);
+        }
+
 
         const datosAgrupadosPorMes = Array(12).fill(0); // Para los 12 meses
         gastosParaGrafico.forEach(gasto => {
@@ -250,7 +363,7 @@ document.addEventListener('DOMContentLoaded', () => {
             data: {
                 labels: labels,
                 datasets: [{
-                    label: 'Gastos Totales (€)',
+                    label: `Gastos Totales (€) ${conceptoFiltrado ? ' - ' + conceptoFiltrado : ''}`, // Etiqueta dinámica
                     data: datosAgrupadosPorMes,
                     backgroundColor: 'rgba(75, 192, 192, 0.6)',
                     borderColor: 'rgba(75, 192, 192, 1)',
@@ -259,6 +372,7 @@ document.addEventListener('DOMContentLoaded', () => {
             },
             options: {
                 responsive: true,
+                maintainAspectRatio: false, // Permitir que el gráfico no mantenga siempre la misma proporción
                 scales: {
                     y: {
                         beginAtZero: true,
@@ -271,6 +385,22 @@ document.addEventListener('DOMContentLoaded', () => {
                         title: {
                             display: true,
                             text: 'Mes'
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                if (context.parsed.y !== null) {
+                                    label += new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(context.parsed.y);
+                                }
+                                return label;
+                            }
                         }
                     }
                 }

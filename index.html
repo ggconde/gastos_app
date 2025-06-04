@@ -19,6 +19,7 @@
             <button id="btn-nuevo-gasto">Registrar Nuevo Gasto</button>
             <h2>Resumen del Mes</h2>
             <p>Total gastado este mes: <span id="gasto-mes-actual">€0.00</span></p>
+            <button id="btn-borrar-todo" class="danger-button">Borrar Todos los Gastos</button>
         </section>
 
         <section id="form-gasto" class="hidden">
@@ -31,7 +32,16 @@
                 <input type="number" id="importe" step="0.01" required>
 
                 <label for="concepto">Concepto:</label>
-                <input type="text" id="concepto" required>
+                <input type="text" id="concepto-input" placeholder="Introduce un concepto...">
+                <select id="concepto-select">
+                    <option value="">O selecciona uno:</option>
+                    <option value="Compra">Compra</option>
+                    <option value="Ayla">Ayla</option>
+                    <option value="Paula">Paula</option>
+                    <option value="Alterne">Alterne</option>
+                    </select>
+                <p class="small-text">Si seleccionas un concepto predefinido, se ignorará el texto introducido.</p>
+
 
                 <button type="submit">Guardar Gasto</button>
                 <button type="button" id="btn-cancelar-gasto">Cancelar</button>
@@ -61,6 +71,10 @@
             <div class="filtros">
                 <label for="grafico-anio">Año:</label>
                 <select id="grafico-anio">
+                    </select>
+                <label for="grafico-concepto">Concepto:</label>
+                <select id="grafico-concepto">
+                    <option value="">Todos</option>
                     </select>
                 <button id="actualizar-grafico">Actualizar Gráfico</button>
             </div>

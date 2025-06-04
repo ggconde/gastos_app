@@ -79,3 +79,45 @@ select {
 .bottom-nav button:hover {
     background-color: #555;
 }
+
+/* ... Tus estilos existentes ... */
+
+.danger-button {
+    background-color: #dc3545; /* Rojo para acciones peligrosas */
+    margin-top: 1rem;
+}
+
+.danger-button:hover {
+    background-color: #c82333;
+}
+
+.delete-button {
+    background-color: #ffc107; /* Amarillo para el botón de borrar individual */
+    color: #333;
+    padding: 0.3rem 0.6rem;
+    font-size: 0.8rem;
+    margin-left: 0.5rem;
+}
+
+.delete-button:hover {
+    background-color: #e0a800;
+}
+
+.small-text {
+    font-size: 0.8rem;
+    color: #666;
+    margin-top: -0.5rem; /* Ajustar un poco la separación */
+    margin-bottom: 1rem;
+}
+
+#lista-gastos-container li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #eee;
+}
+
+#lista-gastos-container li:last-child {
+    border-bottom: none;
+}
