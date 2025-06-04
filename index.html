@@ -11,7 +11,7 @@
 </head>
 <body>
     <header>
-        <h1>Mi Hogar Financiero</h1>
+        <h1>Where is my money?!</h1>
     </header>
 
     <main>
@@ -39,9 +39,8 @@
                     <option value="Ayla">Ayla</option>
                     <option value="Paula">Paula</option>
                     <option value="Alterne">Alterne</option>
-                    </select>
+                </select>
                 <p class="small-text">Si seleccionas un concepto predefinido, se ignorará el texto introducido.</p>
-
 
                 <button type="submit">Guardar Gasto</button>
                 <button type="button" id="btn-cancelar-gasto">Cancelar</button>
@@ -57,6 +56,10 @@
                     </select>
                 <label for="filtro-anio">Año:</label>
                 <select id="filtro-anio">
+                    <option value="">Todos</option>
+                    </select>
+                <label for="filtro-concepto-listado">Concepto:</label>
+                <select id="filtro-concepto-listado">
                     <option value="">Todos</option>
                     </select>
                 <button id="aplicar-filtro">Aplicar Filtro</button>
