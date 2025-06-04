@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control Financiero Familiar</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+    <script defer src="app.js"></script>
+</head>
+<body>
+    <header>
+        <h1>Mi Hogar Financiero</h1>
+    </header>
+
+    <main>
+        <section id="dashboard">
+            <button id="btn-nuevo-gasto">Registrar Nuevo Gasto</button>
+            <h2>Resumen del Mes</h2>
+            <p>Total gastado este mes: <span id="gasto-mes-actual">€0.00</span></p>
+        </section>
+
+        <section id="form-gasto" class="hidden">
+            <h2>Nuevo Gasto</h2>
+            <form id="form-registro-gasto">
+                <label for="fecha">Fecha:</label>
+                <input type="date" id="fecha" required>
+
+                <label for="importe">Importe (€):</label>
+                <input type="number" id="importe" step="0.01" required>
+
+                <label for="concepto">Concepto:</label>
+                <input type="text" id="concepto" required>
+
+                <button type="submit">Guardar Gasto</button>
+                <button type="button" id="btn-cancelar-gasto">Cancelar</button>
+            </form>
+        </section>
+
+        <section id="listado-gastos" class="hidden">
+            <h2>Listado de Gastos</h2>
+            <div class="filtros">
+                <label for="filtro-mes">Mes:</label>
+                <select id="filtro-mes">
+                    <option value="">Todos</option>
+                    </select>
+                <label for="filtro-anio">Año:</label>
+                <select id="filtro-anio">
+                    <option value="">Todos</option>
+                    </select>
+                <button id="aplicar-filtro">Aplicar Filtro</button>
+                <button id="resetear-filtro">Resetear Filtro</button>
+            </div>
+            <ul id="lista-gastos-container">
+                </ul>
+        </section>
+
+        <section id="grafico-gastos" class="hidden">
+            <h2>Gráfico de Gastos Mensuales</h2>
+            <div class="filtros">
+                <label for="grafico-anio">Año:</label>
+                <select id="grafico-anio">
+                    </select>
+                <button id="actualizar-grafico">Actualizar Gráfico</button>
+            </div>
+            <canvas id="myChart"></canvas>
+        </section>
+    </main>
+
+    <nav class="bottom-nav">
+        <button id="nav-dashboard">Inicio</button>
+        <button id="nav-listado">Gastos</button>
+        <button id="nav-grafico">Gráfico</button>
+    </nav>
+</body>
+</html>
